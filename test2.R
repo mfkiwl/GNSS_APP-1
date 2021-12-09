@@ -1,15 +1,14 @@
 source("multidimensional_spline.R")
-spline.df <- splineNd(x = pg01[,c(1,3,4,5)], dimension = 4, name = pg01[1,2], step = 172500)
-
+spline.df <- readRDS("Extraction/PR18_2.RDS")
 df = as.data.frame(matrix(name, nrow = 172500))
 
 library(rgl)
-plot3d(satellite.coor.df[,c(1,2,3)]) 
-plot3d(pg01[,3], pg01[,4], pg01[,5])
+plot3d(spline.df[, c(1, 2, 3)])
+plot3d(pg01[, 3], pg01[, 4], pg01[, 5])
 spheres3d(x = 0,
           y = 0,
           z = 0,
-          radius = 6371)
+          radius = 6378000)
 
 
 
@@ -23,3 +22,14 @@ spheres3d(x = 0,
 #   do.plot = TRUE
 # )
 # # ################
+
+library(threejs)
+globejs(
+        img = "m.jpg",
+        lat = temp.pos$long,
+        long = temp.pos$lat,
+        val = temp.pos$height,
+        pointsize = 5,
+        atmosphere = FALSE,
+        bg = "white"
+)

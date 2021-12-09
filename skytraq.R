@@ -1,9 +1,23 @@
+##################################################################
+#
+# This file contain function that can read and parse a skytraq 
+# message
+#
+# please refer AN0039 for bit order https://bitly.com.vn/hs03dh
+# Nov 2020 - Nguyen Phuong Bac
+#
+##################################################################
 
-# 0 – GPS 1 – SBAS 2 – GLONASS 3 – Galileo 4 – QZSS 5 – BeiDou 6 - IRNSS
+
+
+#' Parse skytraq message with 0xE5 header
+#' Note: 0 – GPS 1 – SBAS 2 – GLONASS 3 – Galileo 4 – QZSS 5 – BeiDou 6 - IRNSS
+#' @param msg vecter of raw data of skytraq message
+#' @return A list of GPS time and a dataframe which contain all satellite data
 skytraq.getObsType <- function(type, svrID) {
   name = switch(type + 1, "PG", "SBAS", "PR", "PE", "PJ", "PC", "IRNSS")
   id = switch(type + 1, svrID, svrID - 120, svrID, svrID, svrID - 192, svrID)
-  return(paste(name, sprintf("%02d", as.numeric(id)), sep = ""))
+  return(paste0(name, sprintf("%02d", as.numeric(id))))
 }
 
 skytraq.findHeader <- function(msg, val) {
@@ -21,7 +35,12 @@ skytraq.findHeader <- function(msg, val) {
   return(res)
 }
 
+#' Parse skytraq message with 0xE5 header
+#'
+#' @param msg vecter of raw data of skytraq message
+#' @return A list of GPS time and a dataframe which contain all satellite data
 skytraq.parseE5 <- function(msg) {
+  source("determine_lambda.R")
   e5.st = skytraq.findHeader(msg, 0xE5)
   i = e5.st$head
   MsgID = msg[i]
@@ -78,6 +97,7 @@ skytraq.parseE5 <- function(msg) {
           GNSS_TYPE,
           Signal_type,
           SVID,
+          determine_lambda(GNSS_TYPE, Signal_type, bitwShiftR(as.numeric(FreqIDnLTI), 4)-7),
           CNR,
           Pseudorange,
           carrier_phase,
@@ -93,6 +113,7 @@ skytraq.parseE5 <- function(msg) {
       "GNSS Type",
       "Signal Type",
       "Server ID",
+      "Wavelength",
       "CNR",
       "Pseudorange",
       "Accumulated carrier cycle ",
@@ -106,6 +127,10 @@ skytraq.parseE5 <- function(msg) {
   ))
 }
 
+#' Parse skytraq message with 0xE8 header
+#'
+#' @param msg vecter of raw data of skytraq message
+#' @return A dataframe of satellite's elevation and azimuth data
 skytraq.parseE8 <- function(msg) {
   e8.st = skytraq.findHeader(msg, 0xE8)
   i = e8.st$head
@@ -156,7 +181,7 @@ skytraq.parseE8 <- function(msg) {
               skytraq.getObsType(GNSS_TYPE, SVID)
             ),
             stringsAsFactors = FALSE)
-    print(i - e8.st$head)
+   # print(i - e8.st$head)
   }
   colnames(df) <-
     c("GNSS Type",
@@ -167,6 +192,10 @@ skytraq.parseE8 <- function(msg) {
   return(df)
 }
 
+#' Parse skytraq message with 0xDF header
+#'
+#' @param msg vecter of raw data of skytraq message
+#' @return A list of reciever position and time
 skytraq.parseDF <- function(msg) {
   df.st = skytraq.findHeader(msg, 0xDF)
   i= df.st$head
@@ -206,32 +235,6 @@ skytraq.parseDF <- function(msg) {
   i = i + 4
   TDOP = readBin(msg[i:(i + 3)], numeric(), size = 4, endian = "big")
   i = i + 4
-  return (list(WN, tow, pos.x, pos.y, pos.z))
+  return (list("week"=WN, "tow" =tow,"x"= pos.x,"y"= pos.y,"z"=pos.z))
 }
-# a = ms(msg = msg)
-# b = skytraq.parseE8(msg = msg)
-# c = skytraq.parseDF(msg = msg)
 
-# R program to illustrate
-# Joining of dataframes
-
-# df = merge(
-#   x = b[c("Elevation", "Azimuth", "Observation Type")],
-#   y = a$DataFrame[c(
-#     "Signal Type",
-#     "CNR",
-#     "Pseudorange",
-#     "Accumulated carrier cycle ",
-#     "Doppler frequency",
-#     "Observation Type"
-#   )],
-#   by = "Observation Type",
-#   all.x = TRUE,
-#   all.y = TRUE
-# )
-# View(df)
-
-
-skytraq.extract <- function(msg) {
-  
-}
